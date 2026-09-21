@@ -1,0 +1,36 @@
+<main class="contenedor">
+  <div class="panel-auth">
+    <h1>Crea tu cuenta</h1>
+    <p class="subtitulo">Regístrate para comprar, guardar tu lista de deseos y rastrear tus pedidos.</p>
+    <form (ngSubmit)="enviar()">
+      <div class="campo">
+        <label for="nombre">Nombre completo</label>
+        <input type="text" id="nombre" name="nombre" required placeholder="Nombre y apellido" [(ngModel)]="nombre" />
+      </div>
+      <div class="campo">
+        <label for="correo">Correo electrónico</label>
+        <input type="email" id="correo" name="correo" required placeholder="tucorreo@ejemplo.com" [(ngModel)]="correo" />
+      </div>
+      <div class="campo">
+        <label for="documento">Documento de identidad</label>
+        <input type="text" id="documento" name="documento" required placeholder="Cédula / documento" [(ngModel)]="documento" />
+      </div>
+      <div class="campo">
+        <label for="ciudad">Ciudad</label>
+        <select id="ciudad" name="ciudad" [(ngModel)]="ciudad">
+          <option value="">Selecciona una ciudad</option>
+          <option *ngFor="let c of ciudades" [value]="c.ciudad">{{ c.ciudad }}</option>
+        </select>
+      </div>
+      <div class="campo">
+        <label for="clave">Contraseña</label>
+        <input type="password" id="clave" name="clave" required minlength="8" placeholder="Mínimo 8 caracteres" [(ngModel)]="clave" />
+      </div>
+      <p class="campo-error" *ngIf="error" style="display:block">{{ error }}</p>
+      <button type="submit" class="boton boton--volt boton--ancho" [disabled]="cargando">
+        {{ cargando ? 'Creando cuenta… (puede tardar hasta 90s si el servidor estaba dormido)' : 'Crear cuenta' }}
+      </button>
+    </form>
+    <p class="enlace-secundario">¿Ya tienes cuenta? <a routerLink="/login">Inicia sesión</a></p>
+  </div>
+</main>

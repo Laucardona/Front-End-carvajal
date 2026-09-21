@@ -1,0 +1,106 @@
+<section class="hero">
+  <div class="contenedor hero__grid">
+    <div>
+      <p class="hero__ojo">Nueva colección trail 2026</p>
+      <h1>Equípate para tu próxima cordillera</h1>
+      <p>
+        Ropa técnica, calzado, bicicletas y accesorios probados en las trochas del Quindío.
+        Comprás hoy, salimos hoy si estás en Armenia.
+      </p>
+      <a href="#catalogo" class="boton boton--volt">Ver catálogo</a>
+    </div>
+    <div class="hero__foto">
+      <img src="https://picsum.photos/seed/hero-ecommerce-trail/700/560" alt="Corredor en un sendero de montaña al amanecer" />
+    </div>
+  </div>
+</section>
+
+<section class="franja-categorias contenedor">
+  <h2>Compra por categoría</h2>
+  <div class="chips-categorias">
+    <button
+      *ngFor="let c of todasLasCategorias"
+      class="chip-categoria"
+      [class.activo]="c.id === categoriaActiva"
+      (click)="seleccionarCategoria(c.id)"
+    >
+      {{ c.nombre }}
+    </button>
+  </div>
+</section>
+
+<section class="seccion contenedor" id="catalogo">
+  <div class="seccion__encabezado">
+    <h2>{{ tituloCatalogo }}</h2>
+    <div class="controles-catalogo">
+      <select [(ngModel)]="tipoFiltro" (ngModelChange)="renderCatalogo()">
+        <option value="">Prendas y artículos</option>
+        <option value="prenda">Solo prendas</option>
+        <option value="objeto">Solo artículos</option>
+      </select>
+      <select [(ngModel)]="ordenFiltro" (ngModelChange)="renderCatalogo()">
+        <option value="">Más relevantes</option>
+        <option value="precio-asc">Precio: menor a mayor</option>
+        <option value="precio-desc">Precio: mayor a menor</option>
+        <option value="rating">Mejor calificados</option>
+      </select>
+    </div>
+  </div>
+  <div class="rejilla-productos" *ngIf="catalogo.length; else sinResultados">
+    <app-product-card *ngFor="let p of catalogo" [producto]="p"></app-product-card>
+  </div>
+  <ng-template #sinResultados>
+    <p style="color:var(--texto-muted)">No encontramos productos con esos filtros.</p>
+  </ng-template>
+</section>
+
+<section class="seccion contenedor" id="promociones">
+  <div class="banner-promo">
+    <div>
+      <h3>15% en tu primera compra</h3>
+      <p>Usa el código <code>BIENVENIDA</code> al pagar. Válido para cuentas nuevas registradas hoy.</p>
+    </div>
+    <a routerLink="/registro" class="boton boton--oscuro">Crear cuenta</a>
+  </div>
+</section>
+
+<section class="seccion contenedor">
+  <h2>Destacados de la temporada</h2>
+  <div class="rejilla-productos">
+    <app-product-card *ngFor="let p of destacados" [producto]="p"></app-product-card>
+  </div>
+</section>
+
+<footer>
+  <div class="contenedor pie-grid">
+    <div>
+      <div class="logo" style="margin-bottom:12px">
+        <svg viewBox="0 0 48 48" class="logo__icono" style="width:28px;height:28px">
+          <path d="M2 38 L16 14 L22 24 L28 10 L46 38 Z" />
+        </svg>
+        <span class="logo__texto" style="font-size:1.2rem">E-COMMERCE</span>
+      </div>
+      <p style="font-size:.85rem;max-width:28ch">Implementos deportivos despachados desde Armenia, Quindío hacia toda Colombia.</p>
+    </div>
+    <div>
+      <h4>Categorías</h4>
+      <a *ngFor="let c of categorias" [routerLink]="'/'" [queryParams]="{ categoria: c.id }" fragment="catalogo">{{ c.nombre }}</a>
+    </div>
+    <div>
+      <h4>Ayuda</h4>
+      <a routerLink="/carrito">Mi carrito</a>
+      <a routerLink="/perfil" [queryParams]="{ tab: 'pedidos' }">Rastrear pedido</a>
+      <a routerLink="/perfil" [queryParams]="{ tab: 'pedidos' }">Devoluciones</a>
+    </div>
+    <div>
+      <h4>Mi cuenta</h4>
+      <a routerLink="/login">Iniciar sesión</a>
+      <a routerLink="/registro">Crear cuenta</a>
+      <a routerLink="/perfil" [queryParams]="{ tab: 'deseos' }">Lista de deseos</a>
+    </div>
+  </div>
+  <div class="contenedor pie-final">
+    <span>© 2026 E-commerce. Proyecto académico — logo e imágenes provisionales.</span>
+    <span>Armenia, Quindío, Colombia</span>
+  </div>
+</footer>

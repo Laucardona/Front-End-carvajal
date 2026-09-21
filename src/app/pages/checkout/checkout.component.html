@@ -1,0 +1,84 @@
+<main class="contenedor" *ngIf="usuario">
+  <h1 style="font-family:var(--fuente-display);font-size:2.2rem;margin-top:30px">Finalizar compra</h1>
+  <div class="pasos-pago contenedor" style="padding:0;margin-top:16px">
+    <div class="paso-pago activo">1. Carrito</div>
+    <div class="paso-pago activo">2. Pago</div>
+    <div class="paso-pago" [class.activo]="pedidoConfirmado">3. Confirmación</div>
+  </div>
+
+  <div class="layout-checkout" *ngIf="!pedidoConfirmado; else confirmacion">
+    <ng-container *ngIf="items.length; else sinItems">
+      <div>
+        <h3>Método de pago</h3>
+        <div class="metodo-pago">
+          <label><input type="radio" name="metodo" value="tarjeta" [(ngModel)]="metodo" /><span>💳 Tarjeta</span></label>
+          <label><input type="radio" name="metodo" value="pse" [(ngModel)]="metodo" /><span>🏦 PSE</span></label>
+          <label><input type="radio" name="metodo" value="contraentrega" [(ngModel)]="metodo" /><span>📦 Contraentrega</span></label>
+        </div>
+
+        <div *ngIf="metodo === 'tarjeta'">
+          <div class="campo">
+            <label for="numero-tarjeta">Número de tarjeta</label>
+            <input type="text" id="numero-tarjeta" placeholder="1234 5678 9012 3456" maxlength="19" [(ngModel)]="numeroTarjeta" name="numeroTarjeta" />
+          </div>
+          <div class="fila-dos">
+            <div class="campo">
+              <label for="vencimiento">Vencimiento</label>
+              <input type="text" id="vencimiento" placeholder="MM/AA" maxlength="5" [(ngModel)]="vencimiento" name="vencimiento" />
+            </div>
+            <div class="campo">
+              <label for="cvv">CVV</label>
+              <input type="text" id="cvv" placeholder="123" maxlength="4" [(ngModel)]="cvv" name="cvv" />
+            </div>
+          </div>
+        </div>
+        <p class="campo-error" *ngIf="error" style="display:block">{{ error }}</p>
+
+        <h3>Dirección de entrega</h3>
+        <div class="campo">
+          <label for="direccion">Dirección</label>
+          <input type="text" id="direccion" placeholder="Calle, número, barrio" required [(ngModel)]="direccion" name="direccion" />
+        </div>
+        <p style="font-size:.85rem;color:var(--texto-muted)">Enviaremos a <strong>{{ ciudad }}</strong> · {{ envio.diasEstimados }}</p>
+
+        <button class="boton boton--volt boton--ancho" style="margin-top:18px" [disabled]="procesando" (click)="pagar()">
+          {{ procesando ? 'Procesando pago...' : 'Pagar ' + formatCOP(total) }}
+        </button>
+      </div>
+
+      <aside class="resumen-pedido">
+        <h3 style="margin-top:0">Tu pedido</h3>
+        <div class="fila-producto-lista" *ngFor="let v of items">
+          <img [src]="imagenURL(v.producto.imagenes[0], 120, 120)" [alt]="v.producto.nombre" />
+          <div>
+            <strong style="font-size:.88rem">{{ v.producto.nombre }}</strong><br />
+            <span style="font-size:.78rem;color:var(--texto-muted)">
+              <ng-container *ngIf="v.item.talla">Talla {{ v.item.talla }} · </ng-container>x{{ v.item.cantidad }}
+            </span>
+          </div>
+          <span>{{ formatCOP(v.producto.precio * v.item.cantidad) }}</span>
+        </div>
+        <div class="fila-resumen" style="margin-top:14px"><span>Subtotal</span><span>{{ formatCOP(subtotal) }}</span></div>
+        <div class="fila-resumen" *ngIf="descuento > 0"><span>Descuento ({{ cupon?.codigo }})</span><span>-{{ formatCOP(descuento) }}</span></div>
+        <div class="fila-resumen"><span>Envío</span><span>{{ envio.costo === 0 ? 'Gratis' : formatCOP(envio.costo) }}</span></div>
+        <div class="fila-resumen total"><span>Total</span><span>{{ formatCOP(total) }}</span></div>
+      </aside>
+    </ng-container>
+
+    <ng-template #sinItems>
+      <div class="carrito-vacio" style="grid-column:1/-1">
+        <h2>No tienes productos para pagar</h2>
+        <a routerLink="/" class="boton boton--volt">Ir al catálogo</a>
+      </div>
+    </ng-template>
+  </div>
+
+  <ng-template #confirmacion>
+    <div style="grid-column:1/-1;text-align:center;padding:40px 0">
+      <h2>¡Pago aprobado! 🎉</h2>
+      <p>Tu pedido <strong>{{ pedidoConfirmado!.id }}</strong> fue confirmado por {{ formatCOP(pedidoConfirmado!.total) }}.</p>
+      <p style="color:var(--texto-muted)">Te enviamos los detalles a tu perfil en la sección de notificaciones.</p>
+      <a routerLink="/perfil" [queryParams]="{ tab: 'pedidos' }" class="boton boton--volt" style="margin-top:16px">Ver mi pedido</a>
+    </div>
+  </ng-template>
+</main>

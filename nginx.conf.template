@@ -1,0 +1,23 @@
+server {
+    listen ${PORT};
+    server_name _;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # Angular usa rutas del lado del cliente (Router) — cualquier ruta que
+    # no sea un archivo real cae en index.html para que el Router la maneje.
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Cache largo para assets con hash en el nombre (los que genera el build).
+    location ~* \.(?:css|js|woff2?|ttf|svg|ico|png|jpg|jpeg|gif)$ {
+        try_files $uri =404;
+        expires 30d;
+        add_header Cache-Control "public, immutable";
+    }
+
+    gzip on;
+    gzip_types text/plain text/css application/javascript application/json image/svg+xml;
+}

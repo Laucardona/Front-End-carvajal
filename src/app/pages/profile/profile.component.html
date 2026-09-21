@@ -1,0 +1,129 @@
+<main class="contenedor" *ngIf="usuario">
+  <div class="layout-perfil">
+    <aside>
+      <div class="tarjeta-perfil">
+        <div class="avatar-perfil">{{ usuario.nombre.charAt(0).toUpperCase() }}</div>
+        <strong>{{ usuario.nombre }}</strong>
+        <p style="font-size:.82rem;color:var(--texto-muted)">{{ usuario.correo }}</p>
+        <button class="boton boton--fantasma boton--ancho" style="margin-top:14px" (click)="cerrarSesion()">Cerrar sesión</button>
+      </div>
+      <nav class="tabs-perfil">
+        <a [class.activo]="tabActiva === 'cuenta'" (click)="cambiarTab('cuenta')">Mis datos</a>
+        <a [class.activo]="tabActiva === 'pedidos'" (click)="cambiarTab('pedidos')">Mis pedidos</a>
+        <a [class.activo]="tabActiva === 'deseos'" (click)="cambiarTab('deseos')">Lista de deseos</a>
+        <a [class.activo]="tabActiva === 'historial'" (click)="cambiarTab('historial')">Historial de navegación</a>
+        <a [class.activo]="tabActiva === 'notificaciones'" (click)="cambiarTab('notificaciones')">Notificaciones</a>
+      </nav>
+    </aside>
+
+    <section class="panel-perfil">
+      <!-- Mis datos -->
+      <ng-container *ngIf="tabActiva === 'cuenta'">
+        <h2>Mis datos</h2>
+        <div class="campo">
+          <label>Nombre completo</label>
+          <input type="text" [(ngModel)]="editarNombre" />
+        </div>
+        <div class="campo">
+          <label>Correo</label>
+          <input type="email" [value]="usuario.correo" disabled />
+        </div>
+        <div class="campo">
+          <label>Ciudad de entrega habitual</label>
+          <select [(ngModel)]="editarCiudad">
+            <option *ngFor="let c of ciudades" [value]="c.ciudad">{{ c.ciudad }}</option>
+          </select>
+        </div>
+        <button class="boton boton--oscuro" (click)="guardarPerfil()">Guardar cambios</button>
+      </ng-container>
+
+      <!-- Mis pedidos -->
+      <ng-container *ngIf="tabActiva === 'pedidos'">
+        <h2>Mis pedidos</h2>
+        <p *ngIf="pedidosVista.length === 0" style="color:var(--texto-muted)">
+          Todavía no tienes pedidos. <a routerLink="/">Explora el catálogo</a>.
+        </p>
+        <div class="tarjeta-pedido" *ngFor="let v of pedidosVista">
+          <div class="tarjeta-pedido__cabecera">
+            <div>
+              <strong>{{ v.pedido.id }}</strong><br />
+              <span style="font-size:.8rem;color:var(--texto-muted)">
+                {{ v.pedido.fecha | date: 'd MMMM y':'':'es-CO' }} · {{ v.pedido.ciudad }}
+              </span>
+            </div>
+            <span class="estado-pedido">{{ v.etiquetaEstado }}</span>
+          </div>
+          <div class="linea-tiempo">
+            <div class="linea-tiempo__paso" *ngFor="let l of v.linea" [class.completado]="l.completado">{{ l.etiqueta }}</div>
+          </div>
+          <div style="font-size:.85rem;color:var(--texto-muted);margin:10px 0">
+            <ng-container *ngFor="let it of v.pedido.items; let last = last">
+              {{ it.nombre }}<ng-container *ngIf="it.talla"> (talla {{ it.talla }})</ng-container> x{{ it.cantidad
+              }}<ng-container *ngIf="!last"> · </ng-container>
+            </ng-container>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+            <strong>{{ formatCOP(v.pedido.total) }}</strong>
+            <div style="display:flex;gap:8px">
+              <button class="boton boton--fantasma" (click)="alternarDetalle(v)">Ver detalle</button>
+              <button
+                class="boton boton--fantasma"
+                *ngIf="!v.pedido.devolucion && v.pedido.estado === 'entregado'"
+                (click)="solicitarDevolucion(v.pedido.id)"
+              >
+                Solicitar devolución
+              </button>
+            </div>
+          </div>
+          <div class="detalle-pedido" *ngIf="v.detalleAbierto" style="margin-top:14px;padding-top:14px;border-top:1px solid var(--borde);font-size:.85rem">
+            <p><strong>ID de transacción:</strong> {{ v.pedido.idTransaccion }}</p>
+            <p>
+              <strong>Subtotal:</strong> {{ formatCOP(v.pedido.subtotal) }} · <strong>Envío:</strong> {{ formatCOP(v.pedido.costoEnvio) }}
+              <ng-container *ngIf="v.pedido.cupon">· <strong>Cupón:</strong> {{ v.pedido.cupon }}</ng-container>
+            </p>
+            <p><strong>Total pagado:</strong> {{ formatCOP(v.pedido.total) }}</p>
+            <p style="color:var(--coral)" *ngIf="v.pedido.devolucion">
+              <strong>Motivo de devolución:</strong> {{ v.pedido.devolucion.motivo }}
+            </p>
+          </div>
+        </div>
+      </ng-container>
+
+      <!-- Lista de deseos -->
+      <ng-container *ngIf="tabActiva === 'deseos'">
+        <h2>Lista de deseos</h2>
+        <p *ngIf="deseos.length === 0" style="color:var(--texto-muted)">
+          Aún no has guardado productos. Toca el ícono de corazón en cualquier producto para guardarlo aquí.
+        </p>
+        <div class="rejilla-productos" *ngIf="deseos.length">
+          <app-product-card *ngFor="let p of deseos" [producto]="p"></app-product-card>
+        </div>
+      </ng-container>
+
+      <!-- Historial -->
+      <ng-container *ngIf="tabActiva === 'historial'">
+        <h2>Historial de navegación</h2>
+        <p *ngIf="historial.length === 0" style="color:var(--texto-muted)">Los productos que visites aparecerán aquí.</p>
+        <div class="rejilla-productos" *ngIf="historial.length">
+          <app-product-card *ngFor="let p of historial" [producto]="p"></app-product-card>
+        </div>
+      </ng-container>
+
+      <!-- Notificaciones -->
+      <ng-container *ngIf="tabActiva === 'notificaciones'">
+        <h2>Notificaciones</h2>
+        <p *ngIf="notificaciones.length === 0" style="color:var(--texto-muted)">No tienes notificaciones todavía.</p>
+        <div class="notificacion" *ngFor="let n of notificaciones" [class.no-leida]="!n.leida">
+          <div class="notificacion__icono">
+            <svg viewBox="0 0 24 24"><path [attr.d]="iconoTipo(n.tipo)" /></svg>
+          </div>
+          <div>
+            <strong>{{ n.titulo }}</strong>
+            <p style="margin:4px 0">{{ n.mensaje }}</p>
+            <span class="notificacion__fecha">{{ n.fecha | date: 'medium':'':'es-CO' }}</span>
+          </div>
+        </div>
+      </ng-container>
+    </section>
+  </div>
+</main>

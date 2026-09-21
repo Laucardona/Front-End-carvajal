@@ -1,0 +1,57 @@
+<main class="contenedor" *ngIf="usuario">
+  <h1 style="font-family:var(--fuente-display);font-size:2.2rem;margin-top:30px">Tu carrito</h1>
+
+  <div class="layout-carrito" *ngIf="items.length; else carritoVacio">
+    <div>
+      <div class="item-carrito" *ngFor="let v of items">
+        <img [src]="imagenURL(v.producto.imagenes[0], 200, 200)" [alt]="v.producto.nombre" />
+        <div>
+          <strong>{{ v.producto.nombre }}</strong>
+          <div class="item-carrito__meta">
+            <ng-container *ngIf="v.item.talla">Talla {{ v.item.talla }} · </ng-container>{{ formatCOP(v.producto.precio) }} c/u
+          </div>
+          <div class="selector-cantidad" style="margin-top:8px;width:fit-content">
+            <button (click)="restar(v.item)">−</button>
+            <span>{{ v.item.cantidad }}</span>
+            <button (click)="sumar(v.item)">+</button>
+          </div>
+          <button class="item-carrito__eliminar" (click)="eliminar(v.item)">Eliminar</button>
+        </div>
+        <strong>{{ formatCOP(v.producto.precio * v.item.cantidad) }}</strong>
+      </div>
+    </div>
+
+    <aside class="resumen-pedido">
+      <h3 style="margin-top:0">Resumen del pedido</h3>
+
+      <div class="selector-ciudad">
+        <label style="font-weight:700;font-size:.85rem;display:block;margin-bottom:6px">Ciudad de entrega</label>
+        <select [(ngModel)]="ciudadSeleccionada">
+          <option *ngFor="let c of ciudades" [value]="c.ciudad">{{ c.ciudad }} — {{ c.dias }}</option>
+        </select>
+      </div>
+
+      <div class="grupo-cupon">
+        <input type="text" placeholder="Código de cupón" [(ngModel)]="codigoCupon" />
+        <button class="boton boton--fantasma" (click)="aplicarCupon()">Aplicar</button>
+      </div>
+      <p *ngIf="cuponAplicado" style="font-size:.82rem;color:#1c8a4b;margin-top:-10px">✓ {{ cuponAplicado.descripcion }}</p>
+
+      <div class="fila-resumen"><span>Subtotal</span><span>{{ formatCOP(subtotal) }}</span></div>
+      <div class="fila-resumen" *ngIf="descuento > 0"><span>Descuento</span><span>-{{ formatCOP(descuento) }}</span></div>
+      <div class="fila-resumen"><span>Envío ({{ envio.distanciaKm }} km)</span><span>{{ envio.costo === 0 ? 'Gratis' : formatCOP(envio.costo) }}</span></div>
+      <div class="fila-resumen total"><span>Total</span><span>{{ formatCOP(total) }}</span></div>
+
+      <button class="boton boton--volt boton--ancho" style="margin-top:16px" (click)="irAPagar()">Ir a pagar</button>
+      <button class="boton boton--fantasma boton--ancho" style="margin-top:10px" (click)="compartirCarrito()">Compartir carrito por WhatsApp</button>
+    </aside>
+  </div>
+
+  <ng-template #carritoVacio>
+    <div class="carrito-vacio" style="grid-column:1/-1">
+      <h2>Tu carrito está vacío</h2>
+      <p>Explora el catálogo y encuentra tu próximo implemento deportivo.</p>
+      <a routerLink="/" class="boton boton--volt">Ir al catálogo</a>
+    </div>
+  </ng-template>
+</main>

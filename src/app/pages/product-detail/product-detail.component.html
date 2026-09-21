@@ -1,0 +1,125 @@
+<main class="contenedor" *ngIf="producto; else noEncontrado">
+  <div class="detalle-producto">
+    <div class="galeria">
+      <img id="imagen-principal" [src]="imagenPrincipal" [alt]="producto.nombre" />
+      <div class="galeria-miniaturas">
+        <img
+          *ngFor="let img of producto.imagenes; let i = index"
+          [src]="imagenURL(img, 200, 200)"
+          [class.activa]="imagenURL(img, 800, 800) === imagenPrincipal"
+          [alt]="'Vista ' + (i + 1) + ' de ' + producto.nombre"
+          (click)="cambiarImagen(img)"
+        />
+      </div>
+    </div>
+    <div class="info-producto">
+      <span class="categoria-tag">{{ categoriaNombre }} · {{ producto.tipo === 'prenda' ? 'Prenda' : 'Artículo' }}</span>
+      <h1>{{ producto.nombre }}</h1>
+      <app-stars [rating]="producto.rating"></app-stars>
+      <span style="font-size:.85rem;color:var(--texto-muted)"> ({{ producto.resenas.length }} reseñas)</span>
+      <div class="info-producto__precio">
+        <strong>{{ formatCOP(producto.precio) }}</strong>
+        <span class="precio-tachado" *ngIf="enPromo">{{ formatCOP(producto.precioOriginal!) }}</span>
+      </div>
+      <p class="info-producto__stock" [class.disponible]="disponible" [class.agotado]="!disponible">
+        {{ disponible ? '✓ Disponible para envío' : 'Agotado temporalmente' }}
+      </p>
+
+      <div *ngIf="producto.tipo === 'prenda'">
+        <label style="font-weight:700;font-size:.85rem;display:block;margin-bottom:8px">Talla</label>
+        <div class="selector-tallas">
+          <button
+            *ngFor="let entrada of tallasEntries"
+            class="talla-opcion"
+            [class.activa]="tallaSeleccionada === entrada[0]"
+            [disabled]="entrada[1] === 0"
+            (click)="seleccionarTalla(entrada[0], entrada[1])"
+          >
+            {{ entrada[0] }}
+          </button>
+        </div>
+      </div>
+
+      <div class="fila-acciones">
+        <div class="selector-cantidad">
+          <button (click)="restarCantidad()">−</button>
+          <span>{{ cantidadSeleccionada }}</span>
+          <button (click)="sumarCantidad()">+</button>
+        </div>
+        <button class="boton boton--volt" [disabled]="!disponible" (click)="agregarAlCarrito()">Agregar al carrito</button>
+        <button class="boton boton--fantasma" (click)="alternarDeseo()">{{ enDeseos ? 'En tu lista ♥' : 'Agregar a deseos' }}</button>
+      </div>
+
+      <div class="fila-compartir">
+        <a class="boton-compartir" title="Compartir por WhatsApp" (click)="compartirWhatsApp()">
+          <svg viewBox="0 0 24 24"><path d="M21 11.5a8.5 8.5 0 11-4.1-7.3L21 3l-1.2 4.4A8.4 8.4 0 0121 11.5z" /></svg>
+        </a>
+        <button class="boton-compartir" title="Copiar enlace" (click)="copiarEnlace()">
+          <svg viewBox="0 0 24 24">
+            <path d="M10 13a5 5 0 007.5.5l2-2a5 5 0 00-7-7l-1 1" />
+            <path d="M14 11a5 5 0 00-7.5-.5l-2 2a5 5 0 007 7l1-1" />
+          </svg>
+        </button>
+      </div>
+
+      <div class="bloque-descripcion">
+        <h3>Descripción del producto</h3>
+        <p>{{ producto.descripcion }}</p>
+      </div>
+    </div>
+  </div>
+</main>
+
+<section class="bloque-resenas contenedor" *ngIf="producto">
+  <h2>Reseñas de clientes</h2>
+  <p *ngIf="producto.resenas.length === 0" style="color:var(--texto-muted)">
+    Este producto aún no tiene reseñas. ¡Sé el primero en opinar!
+  </p>
+  <div class="resena" *ngFor="let r of producto.resenas">
+    <div class="resena__cabecera">
+      <span class="resena__usuario">{{ r.usuario }}</span>
+      <span class="resena__fecha">{{ r.fecha }}</span>
+    </div>
+    <app-stars [rating]="r.estrellas"></app-stars>
+    <p>{{ r.texto }}</p>
+  </div>
+
+  <div class="form-resena">
+    <h3 style="margin-top:0">Escribe tu reseña</h3>
+    <div class="selector-estrellas">
+      <button type="button" *ngFor="let n of [1, 2, 3, 4, 5]" [class.activa]="n <= estrellasForm" (click)="seleccionarEstrellas(n)">
+        <svg viewBox="0 0 20 20"><path d="M10 1l2.6 5.8 6.2.6-4.7 4.2 1.4 6.2L10 14.9 4.5 17.8l1.4-6.2L1.2 7.4l6.2-.6z" /></svg>
+      </button>
+    </div>
+    <textarea
+      rows="3"
+      placeholder="Cuéntanos qué te pareció el producto"
+      style="width:100%;border:1px solid var(--borde);border-radius:8px;padding:12px;margin-bottom:12px"
+      [(ngModel)]="textoResena"
+    ></textarea>
+    <button class="boton boton--oscuro" (click)="enviarResena()">Publicar reseña</button>
+  </div>
+</section>
+
+<section class="seccion contenedor" *ngIf="producto && relacionados.length">
+  <h2>También te puede interesar</h2>
+  <div class="rejilla-productos">
+    <app-product-card *ngFor="let p of relacionados" [producto]="p"></app-product-card>
+  </div>
+</section>
+
+<footer *ngIf="producto">
+  <div class="contenedor pie-final">
+    <span>© 2026 E-commerce. Proyecto académico — logo e imágenes provisionales.</span>
+    <a routerLink="/">Volver al catálogo</a>
+  </div>
+</footer>
+
+<app-whatsapp-button *ngIf="producto" [mensaje]="'Hola, tengo una pregunta sobre ' + producto.nombre + '.'"></app-whatsapp-button>
+
+<ng-template #noEncontrado>
+  <div class="seccion contenedor" style="text-align:center">
+    <h2>No encontramos ese producto</h2>
+    <a routerLink="/" class="boton boton--volt">Volver al catálogo</a>
+  </div>
+</ng-template>

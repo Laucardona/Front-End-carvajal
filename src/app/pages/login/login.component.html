@@ -1,0 +1,21 @@
+<main class="contenedor">
+  <div class="panel-auth">
+    <h1>Bienvenido de nuevo a E-commerce</h1>
+    <p class="subtitulo">Ingresa para ver tu carrito, pedidos y lista de deseos.</p>
+    <form (ngSubmit)="enviar()">
+      <div class="campo">
+        <label for="correo">Correo electrónico</label>
+        <input type="email" id="correo" name="correo" required placeholder="tucorreo@ejemplo.com" [(ngModel)]="correo" />
+      </div>
+      <div class="campo">
+        <label for="clave">Contraseña</label>
+        <input type="password" id="clave" name="clave" required placeholder=" " [(ngModel)]="clave" />
+      </div>
+      <p class="campo-error" *ngIf="error" style="display:block">{{ error }}</p>
+      <button type="submit" class="boton boton--volt boton--ancho" [disabled]="cargando">
+        {{ cargando ? 'Ingresando… (puede tardar hasta 90s si el servidor estaba dormido)' : 'Ingresar' }}
+      </button>
+    </form>
+    <p class="enlace-secundario">¿Aún no tienes cuenta? <a routerLink="/registro">Regístrate aquí</a></p>
+  </div>
+</main>
