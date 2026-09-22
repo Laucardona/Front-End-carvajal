@@ -6,8 +6,7 @@ import { ProductService } from '../../../core/services/product.service';
 import { UserService } from '../../../core/services/user.service';
 import { WishlistService } from '../../../core/services/wishlist.service';
 import { ToastService } from '../../../core/services/toast.service';
-import { FavoritesApiService } from '../../../core/services/favorites-api.service';
-import { HistoryApiService } from '../../../core/services/history-api.service';
+import { NotificationService } from '../../../core/services/notification.service';
 import { formatCOP, imagenURL } from '../../../core/services/utils';
 import { StarsComponent } from '../stars/stars.component';
 
@@ -57,8 +56,7 @@ export class ProductCardComponent {
   private userService = inject(UserService);
   private wishlistService = inject(WishlistService);
   private toastService = inject(ToastService);
-  private favoritesApi = inject(FavoritesApiService);
-  private historyApi = inject(HistoryApiService);
+  private notificationService = inject(NotificationService);
 
   formatCOP = formatCOP;
   imagenURL = imagenURL;
@@ -76,6 +74,17 @@ export class ProductCardComponent {
     return !!usuario && this.wishlistService.estaEnLista(usuario.id, this.producto.id);
   }
 
+  /**
+   * Alterna el producto en la lista de deseos.
+   *
+   * ⚠️ 100% frontend — ya NO depende de favorites-api ni history-api
+   * (el servicio real de favoritos está caído/roto vía gateway, ver
+   * hilo de debugging). Todo lo que ves acá (ícono, contador del
+   * header y la pestaña "Notificaciones") se llena solo con
+   * WishlistService + NotificationService, ambos locales
+   * (localStorage). Cuando el backend de favoritos quede estable, acá
+   * es donde se vuelve a conectar favoritesApi.agregar()/eliminar().
+   */
   alternarDeseo(evento: Event): void {
     evento.preventDefault();
     const usuario = this.userService.usuarioActual();
@@ -84,47 +93,22 @@ export class ProductCardComponent {
       return;
     }
 
-    // Vista local (mock) — sigue alimentando el ícono/contador al instante.
     const agregado = this.wishlistService.alternar(usuario.id, this.producto.id);
     this.toastService.mostrar(
       agregado ? 'Agregado a tu lista de deseos.' : 'Se quitó de tu lista de deseos.',
       'exito'
     );
-    this.deseoCambiado.emit();
 
-    // 🔌 Llamada real a carvajal-favorites (POST) — requiere sesión (JWT).
-    // Si el producto se quitó (agregado === false) no mandamos DELETE
-    // porque la vista local no guarda el idItemFavorite numérico del
-    // backend; solo registramos el alta real.
-    if (!agregado) return;
-
-    // El catálogo visible es el seed-data local (ids tipo 'p01', 'p02'...),
-    // NO coincide 1 a 1 con Productos-M real (que hoy solo tiene idProduct
-    // 1 y 2 — ver captura de /api/products). Extraemos el número del id
-    // ('p01' → 1) para poder probar con los productos que sí existen del
-    // otro lado; para el resto, el backend va a responder con error
-    // (probablemente 404/400) porque ese idProduct no existe todavía allá.
-    // Esto es un parche de prueba, no la solución final — la solución
-    // final es que el catálogo consuma productsApiService.listar() en vez
-    // del seed-data, para que los ids siempre coincidan con el backend real.
-    const match = this.producto.id.match(/\d+/);
-    const idProductoNumerico = match ? Number(match[0]) : NaN;
-    if (Number.isNaN(idProductoNumerico)) {
-      console.warn('[favorites-api] no se pudo extraer un id numérico, se omite POST →', this.producto.id);
-      return;
-    }
-
-    this.favoritesApi.agregar({ idProduct: idProductoNumerico }).subscribe({
-      next: (resp) => {
-        console.log('[favorites-api] POST /favorites →', resp);
-
-        // 🔌 Encadenado: registra el evento en history-service (POST /test).
-        this.historyApi.registrarEvento(resp.idItemFavorite, 'AGREGADO').subscribe({
-          next: (r) => console.log('[history-api] POST /historico/test →', r),
-          error: (err) => console.warn('[history-api] POST falló →', err),
-        });
-      },
-      error: (err) => console.warn('[favorites-api] POST falló →', err),
+    // 🔔 Notificación local — esto es lo que llena la pestaña
+    // "Notificaciones" y su contador cada vez que se da clic.
+    this.notificationService.enviar(usuario.id, {
+      titulo: agregado ? 'Agregado a lista de deseos' : 'Quitado de lista de deseos',
+      mensaje: agregado
+        ? `Guardaste "${this.producto.nombre}" en tu lista de deseos.`
+        : `Quitaste "${this.producto.nombre}" de tu lista de deseos.`,
+      tipo: 'general',
     });
+
+    this.deseoCambiado.emit();
   }
 }
