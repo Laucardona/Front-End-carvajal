@@ -98,9 +98,19 @@ export class ProductCardComponent {
     // backend; solo registramos el alta real.
     if (!agregado) return;
 
-    const idProductoNumerico = Number(this.producto.id);
+    // El catálogo visible es el seed-data local (ids tipo 'p01', 'p02'...),
+    // NO coincide 1 a 1 con Productos-M real (que hoy solo tiene idProduct
+    // 1 y 2 — ver captura de /api/products). Extraemos el número del id
+    // ('p01' → 1) para poder probar con los productos que sí existen del
+    // otro lado; para el resto, el backend va a responder con error
+    // (probablemente 404/400) porque ese idProduct no existe todavía allá.
+    // Esto es un parche de prueba, no la solución final — la solución
+    // final es que el catálogo consuma productsApiService.listar() en vez
+    // del seed-data, para que los ids siempre coincidan con el backend real.
+    const match = this.producto.id.match(/\d+/);
+    const idProductoNumerico = match ? Number(match[0]) : NaN;
     if (Number.isNaN(idProductoNumerico)) {
-      console.warn('[favorites-api] id de producto no numérico, se omite POST →', this.producto.id);
+      console.warn('[favorites-api] no se pudo extraer un id numérico, se omite POST →', this.producto.id);
       return;
     }
 
