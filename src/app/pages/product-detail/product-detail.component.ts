@@ -6,6 +6,7 @@ import { Product } from '../../core/models/product.model';
 import { ProductService } from '../../core/services/product.service';
 import { UserService } from '../../core/services/user.service';
 import { WishlistService } from '../../core/services/wishlist.service';
+import { FavoritesApiService } from '../../core/services/favorites-api.service';
 import { CartService } from '../../core/services/cart.service';
 import { ToastService } from '../../core/services/toast.service';
 import { formatCOP, imagenURL } from '../../core/services/utils';
@@ -24,6 +25,7 @@ export class ProductDetailComponent implements OnInit {
   private productService = inject(ProductService);
   private userService = inject(UserService);
   private wishlistService = inject(WishlistService);
+  private favoritesApiService = inject(FavoritesApiService);
   private cartService = inject(CartService);
   private toastService = inject(ToastService);
 
@@ -132,7 +134,26 @@ export class ProductDetailComponent implements OnInit {
       this.toastService.mostrar('Inicia sesión para guardar en tu lista de deseos.', 'advertencia');
       return;
     }
-    this.wishlistService.alternar(usuario.id, this.producto.id);
+    const agregado = this.wishlistService.alternar(usuario.id, this.producto.id);
+
+    // 🔌 Igual que en product-card: solo se refleja en el backend real
+    // si el producto tiene un id numérico (viene de Productos-M).
+    const idProductoReal = Number(this.producto.id);
+    if (Number.isFinite(idProductoReal)) {
+      if (agregado) {
+        this.favoritesApiService.agregar({ idProduct: idProductoReal, quantity: 1 }).subscribe({
+          next: (fav) => console.log('[favorites-api] POST /favorites →', fav),
+          error: (err) => console.warn('[favorites-api] POST /favorites falló →', err),
+        });
+      } else {
+        this.favoritesApiService.listar().subscribe({
+          next: (favoritos) => {
+            const match = favoritos.find((f) => f.idProduct === idProductoReal);
+            if (match) this.favoritesApiService.eliminar(match.idItemFavorite).subscribe();
+          },
+        });
+      }
+    }
   }
 
   compartirWhatsApp(): void {

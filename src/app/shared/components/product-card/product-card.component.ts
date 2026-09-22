@@ -5,6 +5,7 @@ import { Product } from '../../../core/models/product.model';
 import { ProductService } from '../../../core/services/product.service';
 import { UserService } from '../../../core/services/user.service';
 import { WishlistService } from '../../../core/services/wishlist.service';
+import { FavoritesApiService } from '../../../core/services/favorites-api.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { formatCOP, imagenURL } from '../../../core/services/utils';
 import { StarsComponent } from '../stars/stars.component';
@@ -54,6 +55,7 @@ export class ProductCardComponent {
   private productService = inject(ProductService);
   private userService = inject(UserService);
   private wishlistService = inject(WishlistService);
+  private favoritesApiService = inject(FavoritesApiService);
   private toastService = inject(ToastService);
 
   formatCOP = formatCOP;
@@ -85,5 +87,31 @@ export class ProductCardComponent {
       'exito'
     );
     this.deseoCambiado.emit();
+
+    // 🔌 Si el producto es REAL (viene de Productos-M, id numérico),
+    // reflejamos el cambio también en el microservicio de favorites.
+    // Los productos de ejemplo (id tipo 'p01') no existen en esa base
+    // de datos, así que para esos solo queda el cambio local.
+    const idProductoReal = Number(this.producto.id);
+    if (Number.isFinite(idProductoReal)) {
+      if (agregado) {
+        this.favoritesApiService.agregar({ idProduct: idProductoReal, quantity: 1 }).subscribe({
+          next: (fav) => console.log('[favorites-api] POST /favorites →', fav),
+          error: (err) => console.warn('[favorites-api] POST /favorites falló →', err),
+        });
+      } else {
+        this.favoritesApiService.listar().subscribe({
+          next: (favoritos) => {
+            const match = favoritos.find((f) => f.idProduct === idProductoReal);
+            if (!match) return;
+            this.favoritesApiService.eliminar(match.idItemFavorite).subscribe({
+              next: () => console.log('[favorites-api] DELETE /favorites/' + match.idItemFavorite + ' → ok'),
+              error: (err) => console.warn('[favorites-api] DELETE /favorites falló →', err),
+            });
+          },
+          error: (err) => console.warn('[favorites-api] GET /favorites (para eliminar) falló →', err),
+        });
+      }
+    }
   }
 }

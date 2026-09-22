@@ -35,6 +35,23 @@ export class ProductService {
     return CATEGORIAS;
   }
 
+  /**
+   * Mezcla un producto REAL (venido de Productos-M) en el catálogo local:
+   * lo agrega si es nuevo, o actualiza precio/stock/nombre si ya existía
+   * (mismo id). Así el catálogo muestra los productos de la base de
+   * datos real junto a los de ejemplo.
+   */
+  mergeProductoReal(producto: Product): void {
+    const productos = this.leerDB();
+    const idx = productos.findIndex((p) => p.id === producto.id);
+    if (idx >= 0) {
+      productos[idx] = { ...productos[idx], ...producto };
+    } else {
+      productos.push(producto);
+    }
+    this.guardarDB(productos);
+  }
+
   listarProductos(filtro: FiltroProductos = {}): Product[] {
     let productos = this.leerDB();
     if (filtro.categoria) productos = productos.filter((p) => p.categoria === filtro.categoria);

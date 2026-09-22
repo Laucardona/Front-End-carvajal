@@ -40,15 +40,16 @@ export class HomeComponent {
       this.renderCatalogo();
     });
 
-    // 🔌 Petición real a Productos-M (no requiere JWT). El catálogo que
-    // se ve en pantalla sigue siendo el local (seed-data): el shape real
-    // de ProductApiDTO no está confirmado y este catálogo depende de
-    // campos que la API probablemente no trae (tallas, imágenes múltiples,
-    // reseñas...). Por ahora solo la disparamos y la logueamos para que
-    // se vea la petición real en Network — pégame la respuesta real
-    // cuando la veas y la conecto de verdad al catálogo.
-    this.productsApiService.listar().subscribe({
-      next: (productos) => console.log('[products-api] GET /api/products →', productos),
+    // 🔌 Petición real a Productos-M (no requiere JWT vía llamada directa).
+    // Cada producto que devuelve se mezcla en el catálogo local (mismo id
+    // = actualiza, id nuevo = agrega), así que el catálogo que ves en
+    // pantalla ya incluye los productos reales de la base de datos.
+    this.productsApiService.listarComoProducts().subscribe({
+      next: (productosReales) => {
+        productosReales.forEach((p) => this.productService.mergeProductoReal(p));
+        this.renderCatalogo();
+        console.log('[products-api] productos reales mezclados en el catálogo →', productosReales);
+      },
       error: (err) => console.warn('[products-api] GET /api/products falló →', err),
     });
   }
