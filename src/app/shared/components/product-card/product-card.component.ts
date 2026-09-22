@@ -6,7 +6,9 @@ import { ProductService } from '../../../core/services/product.service';
 import { UserService } from '../../../core/services/user.service';
 import { WishlistService } from '../../../core/services/wishlist.service';
 import { ToastService } from '../../../core/services/toast.service';
-import { NotificationService } from '../../../core/services/notification.service';
+import { FavoritesApiService } from '../../../core/services/favorites-api.service';
+import { HistoryApiService } from '../../../core/services/history-api.service';
+import { NotificationsApiService } from '../../../core/services/notifications-api.service';
 import { formatCOP, imagenURL } from '../../../core/services/utils';
 import { StarsComponent } from '../stars/stars.component';
 
@@ -56,7 +58,9 @@ export class ProductCardComponent {
   private userService = inject(UserService);
   private wishlistService = inject(WishlistService);
   private toastService = inject(ToastService);
-  private notificationService = inject(NotificationService);
+  private favoritesApi = inject(FavoritesApiService);
+  private historyApi = inject(HistoryApiService);
+  private notificationsApi = inject(NotificationsApiService);
 
   formatCOP = formatCOP;
   imagenURL = imagenURL;
@@ -74,17 +78,6 @@ export class ProductCardComponent {
     return !!usuario && this.wishlistService.estaEnLista(usuario.id, this.producto.id);
   }
 
-  /**
-   * Alterna el producto en la lista de deseos.
-   *
-   * ⚠️ 100% frontend — ya NO depende de favorites-api ni history-api
-   * (el servicio real de favoritos está caído/roto vía gateway, ver
-   * hilo de debugging). Todo lo que ves acá (ícono, contador del
-   * header y la pestaña "Notificaciones") se llena solo con
-   * WishlistService + NotificationService, ambos locales
-   * (localStorage). Cuando el backend de favoritos quede estable, acá
-   * es donde se vuelve a conectar favoritesApi.agregar()/eliminar().
-   */
   alternarDeseo(evento: Event): void {
     evento.preventDefault();
     const usuario = this.userService.usuarioActual();
@@ -92,23 +85,39 @@ export class ProductCardComponent {
       this.toastService.mostrar('Inicia sesión para guardar en tu lista de deseos.', 'advertencia');
       return;
     }
-
-    const agregado = this.wishlistService.alternar(usuario.id, this.producto.id);
+    const agregado = this.wishlistService.alternar(usuario.id, this.producto.id); // UI local, se queda igual
     this.toastService.mostrar(
       agregado ? 'Agregado a tu lista de deseos.' : 'Se quitó de tu lista de deseos.',
       'exito'
     );
-
-    // 🔔 Notificación local — esto es lo que llena la pestaña
-    // "Notificaciones" y su contador cada vez que se da clic.
-    this.notificationService.enviar(usuario.id, {
-      titulo: agregado ? 'Agregado a lista de deseos' : 'Quitado de lista de deseos',
-      mensaje: agregado
-        ? `Guardaste "${this.producto.nombre}" en tu lista de deseos.`
-        : `Quitaste "${this.producto.nombre}" de tu lista de deseos.`,
-      tipo: 'general',
-    });
-
     this.deseoCambiado.emit();
+
+    // 🔌 Cadena de POST reales — esto es lo que llena los [] que veías
+    // en history y notifications, en vez de solo hacer GET sobre listas
+    // vacías. Solo corre cuando se AGREGA (no al quitar, ver nota abajo).
+    if (!agregado) return;
+
+    this.favoritesApi.agregar({ idProduct: Number(this.producto.id) }).subscribe({
+      next: (resp) => {
+        console.log('[favorites-api] POST /favorites →', resp);
+
+        // POST #2: registra el evento en el histórico real.
+        this.historyApi.registrarEvento(resp.idItemFavorite, 'AGREGADO').subscribe({
+          next: (r) => console.log('[history-api] POST /historico/test →', r),
+          error: (err) => console.warn('[history-api] POST /historico/test falló →', err),
+        });
+
+        // POST #3: la respuesta de favorites YA trae stockAvailable e
+        // idUser numérico, así que no dependemos de Productos-M (todavía
+        // sin confirmar) para saber si hay que avisar que se agotó.
+        if (resp.stockAvailable <= 0) {
+          this.notificationsApi.crearOutOfStock(resp.idUser, resp.idProduct).subscribe({
+            next: (r) => console.log('[notifications-api] POST /out-of-stock →', r),
+            error: (err) => console.warn('[notifications-api] POST /out-of-stock falló →', err),
+          });
+        }
+      },
+      error: (err) => console.warn('[favorites-api] POST /favorites falló →', err),
+    });
   }
 }

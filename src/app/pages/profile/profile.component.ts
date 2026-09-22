@@ -164,7 +164,23 @@ export class ProfileComponent {
     // para confirmar la conexión — ajustar en cuanto haya un id numérico
     // real por usuario (ligado al futuro auth-service).
     this.notificationsApiService.listarPorUsuario(1).subscribe({
-      next: (notifs) => console.log('[notifications-api] GET /user/1 →', notifs),
+      next: (notifs) => {
+        console.log('[notifications-api] GET /user/1 →', notifs);
+
+        // 🔌 Igual que hacíamos en local con marcarTodasLeidas(), pero
+        // ahora pegándole al backend real: por cada notificación que
+        // llegó como no leída, disparamos el PATCH real. Esto es lo que
+        // te va a aparecer en el Network tab como
+        // PATCH /api/v1/notifications/{id}/read.
+        notifs
+          .filter((n) => !n.read)
+          .forEach((n) => {
+            this.notificationsApiService.marcarLeida(n.id).subscribe({
+              next: (r) => console.log(`[notifications-api] PATCH /${n.id}/read →`, r),
+              error: (err) => console.warn(`[notifications-api] PATCH /${n.id}/read falló →`, err),
+            });
+          });
+      },
       error: (err) => console.warn('[notifications-api] GET /user/1 falló →', err),
     });
   }
