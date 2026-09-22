@@ -5,8 +5,9 @@ import { Product } from '../../../core/models/product.model';
 import { ProductService } from '../../../core/services/product.service';
 import { UserService } from '../../../core/services/user.service';
 import { WishlistService } from '../../../core/services/wishlist.service';
-import { FavoritesApiService } from '../../../core/services/favorites-api.service';
 import { ToastService } from '../../../core/services/toast.service';
+import { FavoritesApiService } from '../../../core/services/favorites-api.service';
+import { HistoryApiService } from '../../../core/services/history-api.service';
 import { formatCOP, imagenURL } from '../../../core/services/utils';
 import { StarsComponent } from '../stars/stars.component';
 
@@ -55,8 +56,9 @@ export class ProductCardComponent {
   private productService = inject(ProductService);
   private userService = inject(UserService);
   private wishlistService = inject(WishlistService);
-  private favoritesApiService = inject(FavoritesApiService);
   private toastService = inject(ToastService);
+  private favoritesApi = inject(FavoritesApiService);
+  private historyApi = inject(HistoryApiService);
 
   formatCOP = formatCOP;
   imagenURL = imagenURL;
@@ -81,6 +83,8 @@ export class ProductCardComponent {
       this.toastService.mostrar('Inicia sesión para guardar en tu lista de deseos.', 'advertencia');
       return;
     }
+
+    // Vista local (mock) — sigue alimentando el ícono/contador al instante.
     const agregado = this.wishlistService.alternar(usuario.id, this.producto.id);
     this.toastService.mostrar(
       agregado ? 'Agregado a tu lista de deseos.' : 'Se quitó de tu lista de deseos.',
@@ -88,30 +92,29 @@ export class ProductCardComponent {
     );
     this.deseoCambiado.emit();
 
-    // 🔌 Si el producto es REAL (viene de Productos-M, id numérico),
-    // reflejamos el cambio también en el microservicio de favorites.
-    // Los productos de ejemplo (id tipo 'p01') no existen en esa base
-    // de datos, así que para esos solo queda el cambio local.
-    const idProductoReal = Number(this.producto.id);
-    if (Number.isFinite(idProductoReal)) {
-      if (agregado) {
-        this.favoritesApiService.agregar({ idProduct: idProductoReal, quantity: 1 }).subscribe({
-          next: (fav) => console.log('[favorites-api] POST /favorites →', fav),
-          error: (err) => console.warn('[favorites-api] POST /favorites falló →', err),
-        });
-      } else {
-        this.favoritesApiService.listar().subscribe({
-          next: (favoritos) => {
-            const match = favoritos.find((f) => f.idProduct === idProductoReal);
-            if (!match) return;
-            this.favoritesApiService.eliminar(match.idItemFavorite).subscribe({
-              next: () => console.log('[favorites-api] DELETE /favorites/' + match.idItemFavorite + ' → ok'),
-              error: (err) => console.warn('[favorites-api] DELETE /favorites falló →', err),
-            });
-          },
-          error: (err) => console.warn('[favorites-api] GET /favorites (para eliminar) falló →', err),
-        });
-      }
+    // 🔌 Llamada real a carvajal-favorites (POST) — requiere sesión (JWT).
+    // Si el producto se quitó (agregado === false) no mandamos DELETE
+    // porque la vista local no guarda el idItemFavorite numérico del
+    // backend; solo registramos el alta real.
+    if (!agregado) return;
+
+    const idProductoNumerico = Number(this.producto.id);
+    if (Number.isNaN(idProductoNumerico)) {
+      console.warn('[favorites-api] id de producto no numérico, se omite POST →', this.producto.id);
+      return;
     }
+
+    this.favoritesApi.agregar({ idProduct: idProductoNumerico }).subscribe({
+      next: (resp) => {
+        console.log('[favorites-api] POST /favorites →', resp);
+
+        // 🔌 Encadenado: registra el evento en history-service (POST /test).
+        this.historyApi.registrarEvento(resp.idItemFavorite, 'AGREGADO').subscribe({
+          next: (r) => console.log('[history-api] POST /historico/test →', r),
+          error: (err) => console.warn('[history-api] POST falló →', err),
+        });
+      },
+      error: (err) => console.warn('[favorites-api] POST falló →', err),
+    });
   }
 }
